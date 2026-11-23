@@ -15,3 +15,25 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  mvc:
+    problemdetails:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  otlp:
+    tracing:
+      # Collector OTLP (Jaeger, Grafana Tempo, etc.). Sobrescribible con OTEL_TRACES_ENDPOINT.
+      endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}

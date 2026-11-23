@@ -1,3 +1,8 @@
+plugins {
+    // Permite que Gradle descargue automaticamente el JDK 17 del toolchain si no esta instalado.
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.8.0'
+}
+
 rootProject.name = 'tp'
 
 include 'servicio-clientes', 'servicio-inventario', 'servicio-pedidos'
