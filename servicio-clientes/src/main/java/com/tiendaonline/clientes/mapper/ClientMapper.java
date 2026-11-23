@@ -4,17 +4,23 @@ import com.tiendaonline.clientes.dto.ClientDTO;
 import com.tiendaonline.clientes.entities.Client;
 
 public abstract class ClientMapper {
-    
+
     public static ClientDTO toDto(Client entity) {
-        return new ClientDTO(entity.getId(),
-                            entity.getName(), 
-                            entity.getSurname(),
-                            entity.getEmail());
+        return ClientDTO.builder()
+                .id(entity.getId())
+                .name(entity.getName())
+                .surname(entity.getSurname())
+                .email(entity.getEmail())
+                .createdAt(entity.getCreatedAt())
+                .build();
     }
+
     public static Client toEntity(ClientDTO dto) {
-        return new Client(dto.getId(), 
-                        dto.getName(), 
-                        dto.getSurname(), 
-                        dto.getEmail());
+        return Client.builder()
+                .id(dto.getId())
+                .name(dto.getName())
+                .surname(dto.getSurname())
+                .email(dto.getEmail())
+                .build();
     }
 }
