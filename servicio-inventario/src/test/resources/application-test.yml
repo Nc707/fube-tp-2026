@@ -1,0 +1,10 @@
+# Perfil de tests de integracion: usa una base separada para no pisar los datos de desarrollo.
+# Requiere crear la base "inventario_test_db" en el Postgres local (ver README).
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/inventario_test_db
+
+# Los logs de los tests van a build/ para no mezclarse con los de la app.
+logging:
+  file:
+    path: build/test-logs

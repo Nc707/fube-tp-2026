@@ -96,6 +96,50 @@ Las tres bases viven en la misma instancia local de PostgreSQL, puerto `5432`, c
 
    O `./gradlew test` desde la raíz para correr los tests de los tres servicios.
 
+## servicio-inventario
+
+Swagger UI: http://localhost:8082/swagger-ui.html — OpenAPI: http://localhost:8082/v3/api-docs
+
+| Método | Ruta                                              | Descripción                                                        |
+|--------|---------------------------------------------------|--------------------------------------------------------------------|
+| GET    | `/api/v1/productos`                               | Listar productos                                                   |
+| GET    | `/api/v1/productos/{id}`                          | Consultar un producto                                              |
+| GET    | `/api/v1/productos/{id}/disponibilidad?cantidad=` | Stock disponible y precio (`cantidad` opcional → `suficiente`)     |
+| POST   | `/api/v1/reservas`                                | Reservar todos los ítems de un pedido (todo o nada)                |
+| GET    | `/api/v1/reservas/{id}`                           | Consultar una reserva                                              |
+| GET    | `/api/v1/reservas?pedidoId=`                      | Reservas de un pedido                                              |
+| POST   | `/api/v1/reservas/{id}/liberacion`                | Liberar una reserva (devuelve el stock)                            |
+| POST   | `/api/v1/reservas/liberacion?pedidoId=`           | Liberar todas las reservas activas de un pedido (idempotente)      |
+
+Ejemplo de reserva:
+
+```http
+POST /api/v1/reservas
+{"pedidoId": 1, "items": [{"productoId": 1, "cantidad": 2}, {"productoId": 2, "cantidad": 1}]}
+```
+
+- `201` con las reservas creadas (incluyen `precioUnitario`, congelado al reservar, para que
+  servicio-pedidos calcule el total).
+- `409 stock-insuficiente` si algún ítem no alcanza: no se reserva ninguno y el cuerpo trae `faltantes`.
+- `409 pedido-con-reservas-activas` si el pedido ya tiene reservas activas.
+- `404` si algún producto no existe; `400` con `errores` por validación.
+
+Todos los errores son `application/problem+json` (RFC 7807). Las reservas concurrentes usan
+`SELECT ... FOR UPDATE` sobre los productos, por lo que el stock nunca queda negativo.
+La migración `V2__seed_productos.sql` carga productos de ejemplo.
+
+**Tests**: unitarios con Mockito (dominio, servicios, controllers con `@WebMvcTest`) e integración
+con `@SpringBootTest` contra Postgres. Los de integración usan el perfil `test`, que apunta a una
+base separada `inventario_test_db` (crearla igual que las otras). MockServer no aplica en este
+servicio porque no llama a otros servicios.
+
+**Observabilidad**:
+- Logs en consola con `traceId`/`spanId`, y en JSON (uno por línea) en
+  `logs/servicio-inventario.json.log` para filtrarlos por `traceId`, `level`, `logger`, etc.
+- Traces exportados por OTLP a `http://localhost:4318/v1/traces` (configurable con
+  `OTEL_TRACES_ENDPOINT`), por ejemplo a Jaeger.
+- Actuator: `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus`.
+
 ## Estado actual
 
 Por ahora cada servicio es un esqueleto: aplicación Spring Boot que levanta, se conecta a su
