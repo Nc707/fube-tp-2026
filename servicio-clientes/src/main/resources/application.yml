@@ -15,3 +15,6 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+feature-flags:
+  mask-pii: true      # valor del modo local
