@@ -18,3 +18,12 @@ spring:
   batch:
     job:
       enabled: false
+  mvc:
+    problemdetails:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
