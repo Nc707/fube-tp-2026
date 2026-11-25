@@ -58,16 +58,24 @@ class InventarioIntegrationTest {
 
     @BeforeEach
     void limpiarYCargarDatos() {
-        jdbcTemplate.execute("TRUNCATE TABLE reservas, productos RESTART IDENTITY CASCADE");
+        jdbcTemplate.execute("DELETE FROM reservas");
+        jdbcTemplate.execute("DELETE FROM productos");
+        jdbcTemplate.execute("ALTER TABLE reservas ALTER COLUMN id RESTART WITH 1");
+        jdbcTemplate.execute("ALTER TABLE productos ALTER COLUMN id RESTART WITH 1");
         tecladoId = insertarProducto("TEC-001", "Teclado", "100.00", 10);
         mouseId = insertarProducto("MOU-001", "Mouse", "25.50", 5);
     }
 
     private long insertarProducto(String sku, String nombre, String precio, int stock) {
-        return jdbcTemplate.queryForObject(
-                "INSERT INTO productos (sku, nombre, precio, cantidad_disponible) "
-                        + "VALUES (?, ?, CAST(? AS NUMERIC), ?) RETURNING id",
-                Long.class, sku, nombre, precio, stock);
+        return new org.springframework.jdbc.core.simple.SimpleJdbcInsert(jdbcTemplate)
+                .withTableName("productos")
+                .usingGeneratedKeyColumns("id")
+                .executeAndReturnKey(java.util.Map.of(
+                        "sku", sku,
+                        "nombre", nombre,
+                        "precio", new java.math.BigDecimal(precio),
+                        "cantidad_disponible", stock))
+                .longValue();
     }
 
     private int stock(long productoId) {
