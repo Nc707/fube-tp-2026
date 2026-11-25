@@ -129,9 +129,9 @@ Todos los errores son `application/problem+json` (RFC 7807). Las reservas concur
 La migración `V2__seed_productos.sql` carga productos de ejemplo.
 
 **Tests**: unitarios con Mockito (dominio, servicios, controllers con `@WebMvcTest`) e integración
-con `@SpringBootTest` contra Postgres. Los de integración usan el perfil `test`, que apunta a una
-base separada `inventario_test_db` (crearla igual que las otras). MockServer no aplica en este
-servicio porque no llama a otros servicios.
+con `@SpringBootTest`. Los de integración usan el perfil `test`, que corre sobre H2 en memoria
+(modo PostgreSQL) con las mismas migraciones de Flyway, por lo que no necesitan Postgres levantado.
+MockServer no aplica en este servicio porque no llama a otros servicios.
 
 **Observabilidad**:
 - Logs en consola con `traceId`/`spanId`, y en JSON (uno por línea) en
