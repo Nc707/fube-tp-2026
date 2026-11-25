@@ -27,3 +27,12 @@ springdoc:
     path: /swagger-ui.html
   api-docs:
     path: /v3/api-docs
+
+servicios:
+  clientes:
+    url: ${CLIENTES_URL:http://localhost:8081}
+  inventario:
+    url: ${INVENTARIO_URL:http://localhost:8082}
+  http:
+    connect-timeout: 2s
+    read-timeout: 5s
