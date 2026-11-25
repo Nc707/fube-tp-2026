@@ -1,6 +1,6 @@
 package com.tiendaonline.pedidos;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -79,7 +79,7 @@ class PedidosIntegrationTest {
                 .andExpect(jsonPath("$.montoTotal").value(108500.00))
                 .andExpect(jsonPath("$.items.length()").value(2));
 
-        assertThat(pedidoRepository.count()).isEqualTo(1);
+        assertEquals(1, pedidoRepository.count());
     }
 
     @Test
@@ -95,7 +95,7 @@ class PedidosIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.faltantes[0].productoId").value(1));
 
-        assertThat(pedidoRepository.count()).isZero();
+        assertEquals(0, pedidoRepository.count());
     }
 
     @Test
@@ -106,7 +106,7 @@ class PedidosIntegrationTest {
         mockMvc.perform(post("/api/v1/pedidos").contentType("application/json").content(PEDIDO))
                 .andExpect(status().isNotFound());
 
-        assertThat(pedidoRepository.count()).isZero();
+        assertEquals(0, pedidoRepository.count());
         otrosServicios.verify(request().withPath("/api/v1/reservas"), VerificationTimes.never());
     }
 
@@ -120,8 +120,7 @@ class PedidosIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.estado").value("CANCELADO"));
 
-        assertThat(pedidoRepository.findById(pedido.getId()).orElseThrow().getEstado())
-                .isEqualTo(EstadoPedido.CANCELADO);
+        assertEquals(EstadoPedido.CANCELADO, pedidoRepository.findById(pedido.getId()).orElseThrow().getEstado());
         otrosServicios.verify(request().withPath("/api/v1/reservas/liberacion")
                 .withQueryStringParameter("pedidoId", pedido.getId().toString()), VerificationTimes.once());
     }
