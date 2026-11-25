@@ -59,7 +59,7 @@ public class ClientServiceImpl implements ClientService {
             log.warn("Client not found clientId={}", id);
             return new ClientNotFoundException();
         });
-        if (flags.isMaskPiiEnabled()) client = masker.maskClient(client);
+        if (flags.isMaskPiiEnabled(id)) client = masker.maskClient(client);
         return client;
     }
 

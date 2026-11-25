@@ -73,7 +73,7 @@ public class ClientServiceImplTest {
     @Test
     void searchById_flagInactive_returnsDataUnmasked() {
         when(repository.findById(1L)).thenReturn(Optional.of(this.getSavedTestSubjectEntity()));
-        when(flags.isMaskPiiEnabled()).thenReturn(false);
+        when(flags.isMaskPiiEnabled(1L)).thenReturn(false);
 
         assertEquals(getSavedTestSubjectDTO(), service.searchById(1L));
 
@@ -82,7 +82,7 @@ public class ClientServiceImplTest {
     @Test
     void searchById_flagActive_returnsMaskedData() {
         when(repository.findById(1L)).thenReturn(Optional.of(getSavedTestSubjectEntity()));
-        when(flags.isMaskPiiEnabled()).thenReturn(true);
+        when(flags.isMaskPiiEnabled(1L)).thenReturn(true);
         when(masker.maskClient(getSavedTestSubjectDTO())).thenReturn(getMaskedTestSubjectDTO());
 
         assertEquals(getMaskedTestSubjectDTO(), service.searchById(1L));

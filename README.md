@@ -109,8 +109,9 @@ evalúa en cada request. Hay dos implementaciones y se elige por perfil de Sprin
 **Configuración en Statsig (una sola vez):**
 
 1. Crear un *Feature Gate* llamado exactamente `mask-pii`.
-2. Darle una regla que lo deje pasar al 100% (el servicio evalúa con un usuario fijo,
-   `servicio-clientes`, así que una regla por usuario puede dar un resultado inesperado).
+2. Darle la regla de rollout deseada. El servicio evalúa el gate por cliente (el id del cliente es el
+   id de usuario de Statsig): con un 50%, aproximadamente la mitad de los clientes sale enmascarada
+   y cada cliente siempre recibe el mismo resultado.
 3. Copiar la **Server Secret Key** del proyecto (empieza con `secret-`; la *Client Key* no sirve).
 
 La clave siempre se pasa por la variable de entorno `STATSIG_SERVER_KEY`: no se escribe en ningún
