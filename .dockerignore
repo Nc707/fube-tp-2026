@@ -1,0 +1,10 @@
+.git
+.gradle
+.idea
+.claude
+**/build
+**/logs
+docs
+Fundamentos_de_Desarrollo_Backend-IS-2026-2_Recursos__Campus_Virtual
+Fundamentos_de_Desarrollo_Backend-IS-2026-2_Recursos__Campus_Virtual.zip
+.env
