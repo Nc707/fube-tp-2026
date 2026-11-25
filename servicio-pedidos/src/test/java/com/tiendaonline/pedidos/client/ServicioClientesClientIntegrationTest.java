@@ -46,18 +46,18 @@ class ServicioClientesClientIntegrationTest {
 
     @Test
     void clienteExistenteNoLanzaExcepcion() {
-        clientesMock.when(request().withMethod("GET").withPath("/clients/5"))
+        clientesMock.when(request().withMethod("GET").withPath("/api/v1/clientes/5"))
                 .respond(response().withStatusCode(200).withContentType(MediaType.APPLICATION_JSON)
                         .withBody("{\"id\":5,\"name\":\"J***\",\"surname\":\"P***\",\"email\":\"****@****.com\"}"));
 
         assertThatCode(() -> clientesClient.verificarExistencia(5L)).doesNotThrowAnyException();
 
-        clientesMock.verify(request().withMethod("GET").withPath("/clients/5"), VerificationTimes.once());
+        clientesMock.verify(request().withMethod("GET").withPath("/api/v1/clientes/5"), VerificationTimes.once());
     }
 
     @Test
     void clienteInexistenteLanzaClienteNoEncontrado() {
-        clientesMock.when(request().withMethod("GET").withPath("/clients/99"))
+        clientesMock.when(request().withMethod("GET").withPath("/api/v1/clientes/99"))
                 .respond(response().withStatusCode(404)
                         .withContentType(MediaType.parse("application/problem+json"))
                         .withBody("{\"status\":404,\"detail\":\"Client not found\"}"));
@@ -69,7 +69,7 @@ class ServicioClientesClientIntegrationTest {
 
     @Test
     void errorDelServicioLanzaServicioNoDisponible() {
-        clientesMock.when(request().withPath("/clients/5")).respond(response().withStatusCode(500));
+        clientesMock.when(request().withPath("/api/v1/clientes/5")).respond(response().withStatusCode(500));
 
         assertThatThrownBy(() -> clientesClient.verificarExistencia(5L))
                 .isInstanceOf(ServicioNoDisponibleException.class)
@@ -78,7 +78,7 @@ class ServicioClientesClientIntegrationTest {
 
     @Test
     void timeoutLanzaServicioNoDisponible() {
-        clientesMock.when(request().withPath("/clients/5"))
+        clientesMock.when(request().withPath("/api/v1/clientes/5"))
                 .respond(response().withStatusCode(200).withDelay(TimeUnit.SECONDS, 2));
 
         assertThatThrownBy(() -> clientesClient.verificarExistencia(5L))
