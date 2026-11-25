@@ -1,7 +1,9 @@
 package com.tiendaonline.pedidos.service;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -29,9 +31,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -48,13 +50,16 @@ class PedidoServiceTest {
     private ServicioClientesClient clientesClient;
     @Mock
     private ServicioInventarioClient inventarioClient;
+    @Mock
+    private Clock clock;
+
+    @InjectMocks
     private PedidoService pedidoService;
 
-    @BeforeEach
-    void crearServicio() {
-        // reloj fijo en NOW para poder verificar las fechas
-        Clock clock = Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
-        pedidoService = new PedidoService(pedidoRepository, clientesClient, inventarioClient, clock);
+    // el reloj mockeado devuelve siempre NOW, para poder verificar las fechas
+    private void relojEnNow() {
+        when(clock.getZone()).thenReturn(ZoneId.systemDefault());
+        when(clock.instant()).thenReturn(NOW.atZone(ZoneId.systemDefault()).toInstant());
     }
 
     // Simula que la base le asigna el id 10 al pedido
@@ -71,16 +76,16 @@ class PedidoServiceTest {
         Pedido pedido = Pedido.crear(5L, NOW);
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
 
-        assertThat(pedidoService.obtener(1L)).isSameAs(pedido);
+        assertSame(pedido, pedidoService.obtener(1L));
     }
 
     @Test
     void obtenerPedidoInexistenteLanzaExcepcion() {
         when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> pedidoService.obtener(99L))
-                .isInstanceOf(PedidoNoEncontradoException.class)
-                .hasMessageContaining("99");
+        PedidoNoEncontradoException ex = assertThrows(PedidoNoEncontradoException.class,
+                () -> pedidoService.obtener(99L));
+        assertTrue(ex.getMessage().contains("99"));
     }
 
     @Test
@@ -88,18 +93,19 @@ class PedidoServiceTest {
         List<Pedido> pedidos = List.of(Pedido.crear(5L, NOW), Pedido.crear(5L, NOW.plusHours(1)));
         when(pedidoRepository.findByClienteIdOrderByIdAsc(5L)).thenReturn(pedidos);
 
-        assertThat(pedidoService.listarPorCliente(5L)).isEqualTo(pedidos);
+        assertEquals(pedidos, pedidoService.listarPorCliente(5L));
     }
 
     @Test
     void listarPorClienteSinPedidosDevuelveListaVacia() {
         when(pedidoRepository.findByClienteIdOrderByIdAsc(7L)).thenReturn(List.of());
 
-        assertThat(pedidoService.listarPorCliente(7L)).isEmpty();
+        assertTrue(pedidoService.listarPorCliente(7L).isEmpty());
     }
 
     @Test
     void crearReservaElStockYCalculaElTotalConLosPreciosDeInventario() {
+        relojEnNow();
         guardarAsignaId();
         when(inventarioClient.reservar(10L, ITEMS)).thenReturn(List.of(
                 new ReservaInventario(1L, 1L, 2, new BigDecimal("45000.00")),
@@ -108,17 +114,17 @@ class PedidoServiceTest {
         Pedido pedido = pedidoService.crear(5L, ITEMS);
 
         verify(clientesClient).verificarExistencia(5L);
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
-        assertThat(pedido.getItems()).hasSize(2);
-        assertThat(pedido.getMontoTotal()).isEqualByComparingTo("108500.00");
-        assertThat(pedido.getFechaCreacion()).isEqualTo(NOW);
+        assertEquals(EstadoPedido.CREADO, pedido.getEstado());
+        assertEquals(2, pedido.getItems().size());
+        assertEquals(new BigDecimal("108500.00"), pedido.getMontoTotal());
+        assertEquals(NOW, pedido.getFechaCreacion());
     }
 
     @Test
     void crearConClienteInexistenteNoGuardaNiReserva() {
         doThrow(new ClienteNoEncontradoException(5L)).when(clientesClient).verificarExistencia(5L);
 
-        assertThatThrownBy(() -> pedidoService.crear(5L, ITEMS)).isInstanceOf(ClienteNoEncontradoException.class);
+        assertThrows(ClienteNoEncontradoException.class, () -> pedidoService.crear(5L, ITEMS));
 
         verify(pedidoRepository, never()).saveAndFlush(any());
         verifyNoInteractions(inventarioClient);
@@ -126,43 +132,47 @@ class PedidoServiceTest {
 
     @Test
     void crearSinStockFallaYNoLiberaPorqueInventarioNoReservoNada() {
+        relojEnNow();
         guardarAsignaId();
         when(inventarioClient.reservar(anyLong(), anyList()))
                 .thenThrow(new StockInsuficienteException(List.of(new StockInsuficienteException.Faltante(1L, 2, 0))));
 
-        assertThatThrownBy(() -> pedidoService.crear(5L, ITEMS)).isInstanceOf(StockInsuficienteException.class);
+        assertThrows(StockInsuficienteException.class, () -> pedidoService.crear(5L, ITEMS));
 
         verify(inventarioClient, never()).liberarPorPedido(anyLong());
     }
 
     @Test
     void crearConInventarioNoDisponibleLiberaPorLasDudas() {
+        relojEnNow();
         guardarAsignaId();
         when(inventarioClient.reservar(anyLong(), anyList()))
                 .thenThrow(new ServicioNoDisponibleException("servicio-inventario", "timeout", null));
 
-        assertThatThrownBy(() -> pedidoService.crear(5L, ITEMS)).isInstanceOf(ServicioNoDisponibleException.class);
+        assertThrows(ServicioNoDisponibleException.class, () -> pedidoService.crear(5L, ITEMS));
 
         verify(inventarioClient).liberarPorPedido(10L);
     }
 
     @Test
     void cancelarCambiaElEstadoYLiberaElStock() {
+        relojEnNow();
         when(pedidoRepository.findById(10L)).thenReturn(Optional.of(Pedido.crear(5L, NOW.minusHours(1))));
 
         Pedido pedido = pedidoService.cancelar(10L);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CANCELADO);
+        assertEquals(EstadoPedido.CANCELADO, pedido.getEstado());
         verify(inventarioClient).liberarPorPedido(10L);
     }
 
     @Test
     void cancelarUnPedidoExpiradoFallaYNoLiberaStock() {
+        relojEnNow();
         Pedido expirado = Pedido.crear(5L, NOW.minusDays(2));
         expirado.expirar(NOW.minusDays(1));
         when(pedidoRepository.findById(10L)).thenReturn(Optional.of(expirado));
 
-        assertThatThrownBy(() -> pedidoService.cancelar(10L)).isInstanceOf(TransicionEstadoInvalidaException.class);
+        assertThrows(TransicionEstadoInvalidaException.class, () -> pedidoService.cancelar(10L));
 
         verifyNoInteractions(inventarioClient);
     }

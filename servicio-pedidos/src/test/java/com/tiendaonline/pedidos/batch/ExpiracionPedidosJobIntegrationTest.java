@@ -1,6 +1,6 @@
 package com.tiendaonline.pedidos.batch;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
@@ -60,12 +60,12 @@ class ExpiracionPedidosJobIntegrationTest {
 
         ResumenExpiracion resumen = scheduler.ejecutar();
 
-        assertThat(resumen.estado()).isEqualTo("COMPLETED");
-        assertThat(resumen.leidos()).isEqualTo(1);
-        assertThat(resumen.expirados()).isEqualTo(1);
-        assertThat(estadoDe(vencido)).isEqualTo(EstadoPedido.EXPIRADO);
-        assertThat(estadoDe(reciente)).isEqualTo(EstadoPedido.CREADO);
-        assertThat(estadoDe(confirmado)).isEqualTo(EstadoPedido.CONFIRMADO);
+        assertEquals("COMPLETED", resumen.estado());
+        assertEquals(1, resumen.leidos());
+        assertEquals(1, resumen.expirados());
+        assertEquals(EstadoPedido.EXPIRADO, estadoDe(vencido));
+        assertEquals(EstadoPedido.CREADO, estadoDe(reciente));
+        assertEquals(EstadoPedido.CONFIRMADO, estadoDe(confirmado));
         inventario.verify(request().withPath("/api/v1/reservas/liberacion")
                 .withQueryStringParameter("pedidoId", vencido.getId().toString()), VerificationTimes.once());
         inventario.verify(request().withPath("/api/v1/reservas/liberacion"), VerificationTimes.once());

@@ -1,7 +1,8 @@
 package com.tiendaonline.pedidos.client;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 
@@ -16,11 +17,13 @@ import org.mockserver.model.MediaType;
 import org.mockserver.verify.VerificationTimes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 // servicio-clientes simulado con MockServer
 @SpringBootTest
+@ActiveProfiles("test")
 class ServicioClientesClientIntegrationTest {
 
     private static final ClientAndServer clientesMock = ClientAndServer.startClientAndServer();
@@ -50,7 +53,7 @@ class ServicioClientesClientIntegrationTest {
                 .respond(response().withStatusCode(200).withContentType(MediaType.APPLICATION_JSON)
                         .withBody("{\"id\":5,\"name\":\"J***\",\"surname\":\"P***\",\"email\":\"****@****.com\"}"));
 
-        assertThatCode(() -> clientesClient.verificarExistencia(5L)).doesNotThrowAnyException();
+        assertDoesNotThrow(() -> clientesClient.verificarExistencia(5L));
 
         clientesMock.verify(request().withMethod("GET").withPath("/api/v1/clientes/5"), VerificationTimes.once());
     }
@@ -62,18 +65,18 @@ class ServicioClientesClientIntegrationTest {
                         .withContentType(MediaType.parse("application/problem+json"))
                         .withBody("{\"status\":404,\"detail\":\"Client not found\"}"));
 
-        assertThatThrownBy(() -> clientesClient.verificarExistencia(99L))
-                .isInstanceOf(ClienteNoEncontradoException.class)
-                .hasMessageContaining("99");
+        ClienteNoEncontradoException ex = assertThrows(ClienteNoEncontradoException.class,
+                () -> clientesClient.verificarExistencia(99L));
+        assertTrue(ex.getMessage().contains("99"));
     }
 
     @Test
     void errorDelServicioLanzaServicioNoDisponible() {
         clientesMock.when(request().withPath("/api/v1/clientes/5")).respond(response().withStatusCode(500));
 
-        assertThatThrownBy(() -> clientesClient.verificarExistencia(5L))
-                .isInstanceOf(ServicioNoDisponibleException.class)
-                .hasMessageContaining("servicio-clientes");
+        ServicioNoDisponibleException ex = assertThrows(ServicioNoDisponibleException.class,
+                () -> clientesClient.verificarExistencia(5L));
+        assertTrue(ex.getMessage().contains("servicio-clientes"));
     }
 
     @Test
@@ -81,7 +84,6 @@ class ServicioClientesClientIntegrationTest {
         clientesMock.when(request().withPath("/api/v1/clientes/5"))
                 .respond(response().withStatusCode(200).withDelay(TimeUnit.SECONDS, 2));
 
-        assertThatThrownBy(() -> clientesClient.verificarExistencia(5L))
-                .isInstanceOf(ServicioNoDisponibleException.class);
+        assertThrows(ServicioNoDisponibleException.class, () -> clientesClient.verificarExistencia(5L));
     }
 }

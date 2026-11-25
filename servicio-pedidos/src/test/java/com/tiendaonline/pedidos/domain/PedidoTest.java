@@ -1,12 +1,16 @@
 package com.tiendaonline.pedidos.domain;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.tiendaonline.pedidos.exception.TransicionEstadoInvalidaException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class PedidoTest {
 
@@ -17,17 +21,17 @@ class PedidoTest {
     void crearIniciaEnCreadoSinItemsYConTotalCero() {
         Pedido pedido = Pedido.crear(5L, NOW);
 
-        assertThat(pedido.getClienteId()).isEqualTo(5L);
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CREADO);
-        assertThat(pedido.getMontoTotal()).isEqualByComparingTo("0");
-        assertThat(pedido.getItems()).isEmpty();
-        assertThat(pedido.getFechaCreacion()).isEqualTo(NOW);
-        assertThat(pedido.getFechaActualizacion()).isEqualTo(NOW);
+        assertEquals(5L, pedido.getClienteId());
+        assertEquals(EstadoPedido.CREADO, pedido.getEstado());
+        assertEquals(BigDecimal.ZERO, pedido.getMontoTotal());
+        assertTrue(pedido.getItems().isEmpty());
+        assertEquals(NOW, pedido.getFechaCreacion());
+        assertEquals(NOW, pedido.getFechaActualizacion());
     }
 
     @Test
     void crearSinClienteFalla() {
-        assertThatThrownBy(() -> Pedido.crear(null, NOW)).isInstanceOf(IllegalArgumentException.class);
+        assertThrows(IllegalArgumentException.class, () -> Pedido.crear(null, NOW));
     }
 
     @Test
@@ -37,8 +41,8 @@ class PedidoTest {
         pedido.agregarItem(1L, 2, new BigDecimal("45000.00"));
         pedido.agregarItem(2L, 3, new BigDecimal("18500.50"));
 
-        assertThat(pedido.getItems()).hasSize(2);
-        assertThat(pedido.getMontoTotal()).isEqualByComparingTo("145501.50");
+        assertEquals(2, pedido.getItems().size());
+        assertEquals(new BigDecimal("145501.50"), pedido.getMontoTotal());
     }
 
     @Test
@@ -47,24 +51,27 @@ class PedidoTest {
 
         ItemPedido item = pedido.agregarItem(1L, 2, new BigDecimal("100.00"));
 
-        assertThat(item.getPedido()).isSameAs(pedido);
-        assertThat(item.getProductoId()).isEqualTo(1L);
-        assertThat(item.getCantidad()).isEqualTo(2);
-        assertThat(item.getPrecioUnitario()).isEqualByComparingTo("100.00");
-        assertThat(item.subtotal()).isEqualByComparingTo("200.00");
+        assertSame(pedido, item.getPedido());
+        assertEquals(1L, item.getProductoId());
+        assertEquals(2, item.getCantidad());
+        assertEquals(new BigDecimal("100.00"), item.getPrecioUnitario());
+        assertEquals(new BigDecimal("200.00"), item.subtotal());
     }
 
-    @Test
-    void agregarItemConDatosInvalidosFalla() {
+    // productoId vacio = null
+    @ParameterizedTest
+    @CsvSource({
+            "1, 0, 10",
+            "1, -1, 10",
+            "1, 1, -1",
+            ", 1, 10"
+    })
+    void agregarItemConDatosInvalidosFalla(Long productoId, int cantidad, BigDecimal precioUnitario) {
         Pedido pedido = Pedido.crear(5L, NOW);
 
-        assertThatThrownBy(() -> pedido.agregarItem(1L, 0, BigDecimal.TEN))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> pedido.agregarItem(1L, 1, new BigDecimal("-1")))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> pedido.agregarItem(null, 1, BigDecimal.TEN))
-                .isInstanceOf(IllegalArgumentException.class);
-        assertThat(pedido.getItems()).isEmpty();
+        assertThrows(IllegalArgumentException.class,
+                () -> pedido.agregarItem(productoId, cantidad, precioUnitario));
+        assertTrue(pedido.getItems().isEmpty());
     }
 
     @Test
@@ -72,8 +79,7 @@ class PedidoTest {
         Pedido pedido = Pedido.crear(5L, NOW);
         pedido.confirmar(LATER);
 
-        assertThatThrownBy(() -> pedido.agregarItem(1L, 1, BigDecimal.TEN))
-                .isInstanceOf(IllegalStateException.class);
+        assertThrows(IllegalStateException.class, () -> pedido.agregarItem(1L, 1, BigDecimal.TEN));
     }
 
     @Test
@@ -81,8 +87,7 @@ class PedidoTest {
         Pedido pedido = Pedido.crear(5L, NOW);
         pedido.agregarItem(1L, 1, BigDecimal.TEN);
 
-        assertThatThrownBy(() -> pedido.getItems().clear())
-                .isInstanceOf(UnsupportedOperationException.class);
+        assertThrows(UnsupportedOperationException.class, () -> pedido.getItems().clear());
     }
 
     @Test
@@ -91,9 +96,9 @@ class PedidoTest {
 
         pedido.confirmar(LATER);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CONFIRMADO);
-        assertThat(pedido.getFechaActualizacion()).isEqualTo(LATER);
-        assertThat(pedido.getFechaCreacion()).isEqualTo(NOW);
+        assertEquals(EstadoPedido.CONFIRMADO, pedido.getEstado());
+        assertEquals(LATER, pedido.getFechaActualizacion());
+        assertEquals(NOW, pedido.getFechaCreacion());
     }
 
     @Test
@@ -101,8 +106,7 @@ class PedidoTest {
         Pedido pedido = Pedido.crear(5L, NOW);
         pedido.confirmar(LATER);
 
-        assertThatThrownBy(() -> pedido.confirmar(LATER))
-                .isInstanceOf(TransicionEstadoInvalidaException.class);
+        assertThrows(TransicionEstadoInvalidaException.class, () -> pedido.confirmar(LATER));
     }
 
     @Test
@@ -111,8 +115,8 @@ class PedidoTest {
 
         pedido.cancelar(LATER);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CANCELADO);
-        assertThat(pedido.getFechaActualizacion()).isEqualTo(LATER);
+        assertEquals(EstadoPedido.CANCELADO, pedido.getEstado());
+        assertEquals(LATER, pedido.getFechaActualizacion());
     }
 
     @Test
@@ -122,7 +126,7 @@ class PedidoTest {
 
         pedido.cancelar(LATER);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.CANCELADO);
+        assertEquals(EstadoPedido.CANCELADO, pedido.getEstado());
     }
 
     @Test
@@ -132,13 +136,11 @@ class PedidoTest {
         Pedido expirado = Pedido.crear(5L, NOW);
         expirado.expirar(NOW);
 
-        assertThatThrownBy(() -> cancelado.cancelar(LATER))
-                .isInstanceOf(TransicionEstadoInvalidaException.class);
-        assertThatThrownBy(() -> expirado.cancelar(LATER))
-                .isInstanceOf(TransicionEstadoInvalidaException.class);
-        assertThat(cancelado.getEstado()).isEqualTo(EstadoPedido.CANCELADO);
-        assertThat(expirado.getEstado()).isEqualTo(EstadoPedido.EXPIRADO);
-        assertThat(cancelado.getFechaActualizacion()).isEqualTo(NOW);
+        assertThrows(TransicionEstadoInvalidaException.class, () -> cancelado.cancelar(LATER));
+        assertThrows(TransicionEstadoInvalidaException.class, () -> expirado.cancelar(LATER));
+        assertEquals(EstadoPedido.CANCELADO, cancelado.getEstado());
+        assertEquals(EstadoPedido.EXPIRADO, expirado.getEstado());
+        assertEquals(NOW, cancelado.getFechaActualizacion());
     }
 
     @Test
@@ -147,8 +149,8 @@ class PedidoTest {
 
         pedido.expirar(LATER);
 
-        assertThat(pedido.getEstado()).isEqualTo(EstadoPedido.EXPIRADO);
-        assertThat(pedido.getFechaActualizacion()).isEqualTo(LATER);
+        assertEquals(EstadoPedido.EXPIRADO, pedido.getEstado());
+        assertEquals(LATER, pedido.getFechaActualizacion());
     }
 
     @Test
@@ -156,9 +158,9 @@ class PedidoTest {
         Pedido confirmado = Pedido.crear(5L, NOW);
         confirmado.confirmar(NOW);
 
-        assertThatThrownBy(() -> confirmado.expirar(LATER))
-                .isInstanceOf(TransicionEstadoInvalidaException.class)
-                .hasMessageContaining("CONFIRMADO")
-                .hasMessageContaining("EXPIRADO");
+        TransicionEstadoInvalidaException ex = assertThrows(TransicionEstadoInvalidaException.class,
+                () -> confirmado.expirar(LATER));
+        assertTrue(ex.getMessage().contains("CONFIRMADO"));
+        assertTrue(ex.getMessage().contains("EXPIRADO"));
     }
 }

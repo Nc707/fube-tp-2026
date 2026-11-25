@@ -11,7 +11,7 @@ dependencies {
 
     // Observabilidad 
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 
     runtimeOnly 'org.postgresql:postgresql'
@@ -24,4 +24,5 @@ dependencies {
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testRuntimeOnly 'com.h2database:h2'
 }

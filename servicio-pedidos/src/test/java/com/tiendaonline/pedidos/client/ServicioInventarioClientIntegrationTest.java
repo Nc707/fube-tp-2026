@@ -1,8 +1,9 @@
 package com.tiendaonline.pedidos.client;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatCode;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
 import static org.mockserver.model.JsonBody.json;
@@ -10,6 +11,7 @@ import static org.mockserver.model.JsonBody.json;
 import com.tiendaonline.pedidos.exception.ProductoNoEncontradoException;
 import com.tiendaonline.pedidos.exception.ServicioNoDisponibleException;
 import com.tiendaonline.pedidos.exception.StockInsuficienteException;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
@@ -21,11 +23,13 @@ import org.mockserver.model.MediaType;
 import org.mockserver.verify.VerificationTimes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 //servicio-inventario simulado con MockServer, con las respuestas reales de su API
 @SpringBootTest
+@ActiveProfiles("test")
 class ServicioInventarioClientIntegrationTest {
 
     private static final ClientAndServer inventarioMock = ClientAndServer.startClientAndServer();
@@ -64,11 +68,11 @@ class ServicioInventarioClientIntegrationTest {
         List<ReservaInventario> reservas = inventarioClient.reservar(50L,
                 List.of(new ItemAReservar(1L, 2), new ItemAReservar(2L, 1)));
 
-        assertThat(reservas).hasSize(2);
-        assertThat(reservas.get(0).productoId()).isEqualTo(1L);
-        assertThat(reservas.get(0).cantidad()).isEqualTo(2);
-        assertThat(reservas.get(0).precioUnitario()).isEqualByComparingTo("45000.00");
-        assertThat(reservas.get(1).precioUnitario()).isEqualByComparingTo("18500.00");
+        assertEquals(2, reservas.size());
+        assertEquals(1L, reservas.get(0).productoId());
+        assertEquals(2, reservas.get(0).cantidad());
+        assertEquals(new BigDecimal("45000.00"), reservas.get(0).precioUnitario());
+        assertEquals(new BigDecimal("18500.00"), reservas.get(1).precioUnitario());
         inventarioMock.verify(request().withMethod("POST").withPath("/api/v1/reservas")
                         .withBody(json("""
                                 {"pedidoId": 50, "items": [{"productoId": 1, "cantidad": 2},
@@ -86,10 +90,9 @@ class ServicioInventarioClientIntegrationTest {
                          "detail": "Stock insuficiente para 1 producto(s)",
                          "faltantes": [{"productoId": 5, "cantidadSolicitada": 3, "cantidadDisponible": 0}]}"""));
 
-        assertThatThrownBy(() -> inventarioClient.reservar(50L, List.of(new ItemAReservar(5L, 3))))
-                .isInstanceOfSatisfying(StockInsuficienteException.class, ex ->
-                        assertThat(ex.getFaltantes()).containsExactly(
-                                new StockInsuficienteException.Faltante(5L, 3, 0)));
+        StockInsuficienteException ex = assertThrows(StockInsuficienteException.class,
+                () -> inventarioClient.reservar(50L, List.of(new ItemAReservar(5L, 3))));
+        assertEquals(List.of(new StockInsuficienteException.Faltante(5L, 3, 0)), ex.getFaltantes());
     }
 
     @Test
@@ -99,9 +102,9 @@ class ServicioInventarioClientIntegrationTest {
                         {"type": "https://tiendaonline.com/problemas/recurso-no-encontrado",
                          "status": 404, "detail": "No existe el producto con id 999"}"""));
 
-        assertThatThrownBy(() -> inventarioClient.reservar(50L, List.of(new ItemAReservar(999L, 1))))
-                .isInstanceOf(ProductoNoEncontradoException.class)
-                .hasMessage("No existe el producto con id 999");
+        ProductoNoEncontradoException ex = assertThrows(ProductoNoEncontradoException.class,
+                () -> inventarioClient.reservar(50L, List.of(new ItemAReservar(999L, 1))));
+        assertEquals("No existe el producto con id 999", ex.getMessage());
     }
 
     @Test
@@ -111,17 +114,17 @@ class ServicioInventarioClientIntegrationTest {
                         {"type": "https://tiendaonline.com/problemas/pedido-con-reservas-activas",
                          "status": 409, "detail": "El pedido 50 ya tiene reservas activas"}"""));
 
-        assertThatThrownBy(() -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))))
-                .isInstanceOf(ServicioNoDisponibleException.class);
+        assertThrows(ServicioNoDisponibleException.class,
+                () -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))));
     }
 
     @Test
     void reservarConErrorDelServidorLanzaServicioNoDisponible() {
         inventarioMock.when(request().withPath("/api/v1/reservas")).respond(response().withStatusCode(500));
 
-        assertThatThrownBy(() -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))))
-                .isInstanceOf(ServicioNoDisponibleException.class)
-                .hasMessageContaining("servicio-inventario");
+        ServicioNoDisponibleException ex = assertThrows(ServicioNoDisponibleException.class,
+                () -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))));
+        assertTrue(ex.getMessage().contains("servicio-inventario"));
     }
 
     @Test
@@ -129,8 +132,8 @@ class ServicioInventarioClientIntegrationTest {
         inventarioMock.when(request().withPath("/api/v1/reservas"))
                 .respond(response().withStatusCode(201).withDelay(TimeUnit.SECONDS, 2));
 
-        assertThatThrownBy(() -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))))
-                .isInstanceOf(ServicioNoDisponibleException.class);
+        assertThrows(ServicioNoDisponibleException.class,
+                () -> inventarioClient.reservar(50L, List.of(new ItemAReservar(1L, 1))));
     }
 
     @Test
@@ -139,7 +142,7 @@ class ServicioInventarioClientIntegrationTest {
                 .respond(response().withStatusCode(200).withContentType(MediaType.APPLICATION_JSON)
                         .withBody("{\"pedidoId\": 50, \"reservas\": []}"));
 
-        assertThatCode(() -> inventarioClient.liberarPorPedido(50L)).doesNotThrowAnyException();
+        assertDoesNotThrow(() -> inventarioClient.liberarPorPedido(50L));
 
         inventarioMock.verify(request().withMethod("POST").withPath("/api/v1/reservas/liberacion")
                 .withQueryStringParameter("pedidoId", "50"), VerificationTimes.once());
@@ -149,7 +152,6 @@ class ServicioInventarioClientIntegrationTest {
     void liberarConErrorLanzaServicioNoDisponible() {
         inventarioMock.when(request().withPath("/api/v1/reservas/liberacion")).respond(response().withStatusCode(503));
 
-        assertThatThrownBy(() -> inventarioClient.liberarPorPedido(50L))
-                .isInstanceOf(ServicioNoDisponibleException.class);
+        assertThrows(ServicioNoDisponibleException.class, () -> inventarioClient.liberarPorPedido(50L));
     }
 }
