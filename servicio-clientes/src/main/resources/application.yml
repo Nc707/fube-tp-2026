@@ -26,6 +26,10 @@ management:
   tracing:
     sampling:
       probability: 1.0
+  otlp:
+    tracing:
+      # Jaeger (docker compose up -d). Sobrescribible con OTEL_TRACES_ENDPOINT.
+      endpoint: ${OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:

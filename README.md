@@ -1,7 +1,7 @@
 # TiendaOnline — Sistema de Gestión de Pedidos, Inventario y Clientes
 
 Monorepo con arquitectura de microservicios para el TP final. Ver el enunciado completo en
-[`tp_final_enunciado.md`](./tp_final_enunciado.md).
+`docs/Enunciado TP.txt`.
 
 ## Estructura del repositorio
 
@@ -187,19 +187,10 @@ MockServer no aplica en este servicio porque no llama a otros servicios.
   `OTEL_TRACES_ENDPOINT`), por ejemplo a Jaeger.
 - Actuator: `/actuator/health`, `/actuator/metrics`, `/actuator/prometheus`.
 
-## Estado actual
+## Observabilidad (los tres servicios)
 
-Por ahora cada servicio es un esqueleto: aplicación Spring Boot que levanta, se conecta a su
-base y aplica las migraciones iniciales de Flyway con las tablas del modelo de datos del
-enunciado. Todavía no hay endpoints REST, lógica de negocio, comunicación entre servicios,
-job batch, feature flags ni observabilidad — se irán agregando de forma incremental.
-
-### Próximos pasos (según el enunciado)
-
-- [ ] Endpoints REST de cada servicio (OpenAPI/Swagger, validaciones, manejo de errores)
-- [ ] Comunicación servicio-pedidos → servicio-clientes / servicio-inventario al crear un pedido
-- [ ] Endpoint `GET /clientes/{id}/ordenes` (servicio-clientes → servicio-pedidos)
-- [ ] Job batch nocturno de expiración de pedidos (Spring Batch)
-- [ ] Feature flag de estrategia de asignación de stock
-- [ ] Tests (TDD, Mockito, MockServer para integración entre servicios)
-- [ ] Observabilidad: Actuator/Micrometer, logs estructurados con correlation id, tracing distribuido
+- **Logs**: JSON, uno por línea, en `logs/<servicio>.json.log` con `traceId`/`spanId`. Se filtran por
+  campo, por ejemplo `grep <traceId> servicio-*/logs/*.json.log` o `jq 'select(.level=="ERROR")'`.
+- **Traces**: exportados por OTLP a `http://localhost:4318/v1/traces` (`OTEL_TRACES_ENDPOINT`
+  para cambiarlo). Para verlos: `docker compose up -d` (Jaeger) y abrir http://localhost:16686.
+  Un `POST /api/v1/pedidos` muestra un único trace con pedidos, clientes e inventario.

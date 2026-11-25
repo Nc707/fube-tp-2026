@@ -1,0 +1,9 @@
+# Visor de trazas para la demo: UI en http://localhost:16686
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+      - "4318:4318"
