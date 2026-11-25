@@ -3,5 +3,5 @@ package com.tiendaonline.clientes.flags;
 
 public interface FeatureFlags {
     
-    public boolean isMaskPiiEnabled();
+    public boolean isMaskPiiEnabled(Long clientId);
 }

@@ -17,7 +17,6 @@ public class StatsigFeatureFlags implements FeatureFlags {
     private static final String GATE_MASK_PII = "mask-pii";
 
     private final String key;
-    private final StatsigUser user = new StatsigUser("servicio-clientes");
 
     public StatsigFeatureFlags(@Value("${statsig.key}") String key) {
         this.key = key;
@@ -29,9 +28,9 @@ public class StatsigFeatureFlags implements FeatureFlags {
     }
 
     @Override
-    public boolean isMaskPiiEnabled() {
+    public boolean isMaskPiiEnabled(Long clientId) {
         try {
-            return Statsig.checkGateSync(user, GATE_MASK_PII);
+            return Statsig.checkGateSync(new StatsigUser(String.valueOf(clientId)), GATE_MASK_PII);
         } catch (Exception e) {
             return true;
         }

@@ -15,7 +15,7 @@ public class LocalFeatureFlags implements FeatureFlags {
     }
 
     @Override
-    public boolean isMaskPiiEnabled() {
+    public boolean isMaskPiiEnabled(Long clientId) {
         return maskPii;
     }
 }
