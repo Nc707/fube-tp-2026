@@ -114,6 +114,56 @@ puertos que corriendo localmente (8081, 8082, 8083). Si ya tenés un Postgres en
 `STATSIG_SERVER_KEY` con la *Server Secret Key* del proyecto; `CLIENTES_PROFILES=statsig` activa
 `StatsigFeatureFlags`. Sin `.env`, clientes usa el flag local de `application.yml`.
 
+## servicio-clientes: feature flag `mask-pii`
+
+`GET /api/v1/clientes/{id}` enmascara `name`, `surname` y `email` según el flag `mask-pii`, que se
+evalúa en cada request. Hay dos implementaciones y se elige por perfil de Spring:
+
+| Perfil | Origen del flag | Cuándo usarlo |
+|---|---|---|
+| (ninguno, por defecto) | `feature-flags.mask-pii` de `application.yml` (`true` = enmascara) | Desarrollo y tests, sin cuenta de Statsig |
+| `statsig` | Gate `mask-pii` de Statsig, evaluado en runtime | Probar o mostrar el cambio del flag sin reiniciar |
+
+**Configuración en Statsig (una sola vez):**
+
+1. Crear un *Feature Gate* llamado exactamente `mask-pii`.
+2. Darle una regla que lo deje pasar al 100% (el servicio evalúa con un usuario fijo,
+   `servicio-clientes`, así que una regla por usuario puede dar un resultado inesperado).
+3. Copiar la **Server Secret Key** del proyecto (empieza con `secret-`; la *Client Key* no sirve).
+
+La clave siempre se pasa por la variable de entorno `STATSIG_SERVER_KEY`: no se escribe en ningún
+archivo versionado.
+
+**Cómo levantar clientes con Statsig, según el caso:**
+
+- **Gradle, PowerShell (Windows):**
+
+  ```powershell
+  $env:STATSIG_SERVER_KEY = "secret-TU_KEY"; ./gradlew :servicio-clientes:bootRun --args="--spring.profiles.active=statsig"
+  ```
+
+- **Gradle, bash (Linux/macOS/Git Bash):**
+
+  ```bash
+  STATSIG_SERVER_KEY=secret-TU_KEY ./gradlew :servicio-clientes:bootRun --args="--spring.profiles.active=statsig"
+  ```
+
+- **IntelliJ:** en *Run → Edit Configurations* de `ServicioClientesApplication`, poner
+  `statsig` en *Active profiles* y `STATSIG_SERVER_KEY=secret-TU_KEY` en *Environment variables*.
+
+- **Docker:** copiar `.env.example` a `.env`, completar `STATSIG_SERVER_KEY` y dejar
+  `CLIENTES_PROFILES=statsig`; luego `docker compose --profile apps up -d --build`
+  (ver "Levantar con Docker").
+
+- **Sin Statsig:** no activar ningún perfil. Para cambiar el valor local sin editar el archivo,
+  usar la variable `FEATURE_FLAGS_MASK_PII=false` (o `true`) al arrancar.
+
+**Cómo verificar:** con el gate encendido el `GET` devuelve datos enmascarados (`J***`, `P***`,
+`****@****.com`); apagando el gate en la consola de Statsig, sin reiniciar el servicio, la misma
+consulta pasa a devolverlos sin enmascarar (puede demorar unos segundos en sincronizar).
+
+Los tests automáticos no usan Statsig: corren con el perfil `test` y el flag local.
+
 ## servicio-inventario
 
 Swagger UI: http://localhost:8082/swagger-ui.html — OpenAPI: http://localhost:8082/v3/api-docs
