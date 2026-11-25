@@ -28,6 +28,15 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  tracing:
+    sampling:
+      probability: 1.0
+
 servicios:
   clientes:
     url: ${CLIENTES_URL:http://localhost:8081}
