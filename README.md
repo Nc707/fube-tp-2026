@@ -96,24 +96,6 @@ Las tres bases viven en la misma instancia local de PostgreSQL, puerto `5432`, c
 
    O `./gradlew test` desde la raíz para correr los tests de los tres servicios.
 
-## Levantar con Docker (opcional)
-
-Con Docker Desktop corriendo, desde la raíz del repo:
-
-```bash
-docker compose up -d                       # solo Postgres, con las 3 bases ya creadas
-docker compose --profile apps up -d --build  # Postgres + servicio-clientes, inventario y pedidos
-docker compose down                        # bajar todo (agregar -v para borrar los datos)
-```
-
-Los servicios dentro de Docker se hablan por nombre (`servicio-pedidos`, etc.) y exponen los mismos
-puertos que corriendo localmente (8081, 8082, 8083). Si ya tenés un Postgres en el puerto 5432
-(por ejemplo uno creado con `docker run`), bajalo antes para evitar el conflicto de puerto.
-
-**Statsig con Docker:** copiar `.env.example` a `.env` (no se versiona) y completar
-`STATSIG_SERVER_KEY` con la *Server Secret Key* del proyecto; `CLIENTES_PROFILES=statsig` activa
-`StatsigFeatureFlags`. Sin `.env`, clientes usa el flag local de `application.yml`.
-
 ## servicio-clientes: feature flag `mask-pii`
 
 `GET /api/v1/clientes/{id}` enmascara `name`, `surname` y `email` según el flag `mask-pii`, que se
@@ -150,10 +132,6 @@ archivo versionado.
 
 - **IntelliJ:** en *Run → Edit Configurations* de `ServicioClientesApplication`, poner
   `statsig` en *Active profiles* y `STATSIG_SERVER_KEY=secret-TU_KEY` en *Environment variables*.
-
-- **Docker:** copiar `.env.example` a `.env`, completar `STATSIG_SERVER_KEY` y dejar
-  `CLIENTES_PROFILES=statsig`; luego `docker compose --profile apps up -d --build`
-  (ver "Levantar con Docker").
 
 - **Sin Statsig:** no activar ningún perfil. Para cambiar el valor local sin editar el archivo,
   usar la variable `FEATURE_FLAGS_MASK_PII=false` (o `true`) al arrancar.
