@@ -1,6 +1,9 @@
 package com.tiendaonline.pedidos.web;
 
 import com.tiendaonline.pedidos.exception.RecursoNoEncontradoException;
+import com.tiendaonline.pedidos.exception.ServicioNoDisponibleException;
+import com.tiendaonline.pedidos.exception.SolicitudInvalidaException;
+import com.tiendaonline.pedidos.exception.StockInsuficienteException;
 import com.tiendaonline.pedidos.exception.TransicionEstadoInvalidaException;
 import java.net.URI;
 import java.util.List;
@@ -35,6 +38,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         ProblemDetail problema = problema(HttpStatus.CONFLICT, "transicion-estado-invalida",
                 "Transicion de estado invalida", ex.getMessage());
         problema.setProperty("estadoActual", ex.getEstadoActual());
+        return problema;
+    }
+
+    @ExceptionHandler(StockInsuficienteException.class)
+    public ProblemDetail handleStockInsuficiente(StockInsuficienteException ex) {
+        ProblemDetail problema = problema(HttpStatus.CONFLICT, "stock-insuficiente", "Stock insuficiente",
+                ex.getMessage());
+        problema.setProperty("faltantes", ex.getFaltantes());
+        return problema;
+    }
+
+    @ExceptionHandler(SolicitudInvalidaException.class)
+    public ProblemDetail handleSolicitudInvalida(SolicitudInvalidaException ex) {
+        return problema(HttpStatus.BAD_REQUEST, "solicitud-invalida", "Solicitud invalida", ex.getMessage());
+    }
+
+    @ExceptionHandler(ServicioNoDisponibleException.class)
+    public ProblemDetail handleServicioNoDisponible(ServicioNoDisponibleException ex) {
+        ProblemDetail problema = problema(HttpStatus.SERVICE_UNAVAILABLE, "servicio-no-disponible",
+                "Servicio no disponible", ex.getMessage());
+        problema.setProperty("servicio", ex.getServicio());
         return problema;
     }
 
