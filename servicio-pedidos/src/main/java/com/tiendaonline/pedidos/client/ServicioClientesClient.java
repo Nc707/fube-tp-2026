@@ -30,7 +30,7 @@ public class ServicioClientesClient {
     public void verificarExistencia(Long clienteId) {
         try {
             restClient.get()
-                    .uri("/clients/{clienteId}", clienteId)
+                    .uri("/api/v1/clientes/{clienteId}", clienteId)
                     .retrieve()
                     .toBodilessEntity();
         } catch (HttpClientErrorException.NotFound ex) {
