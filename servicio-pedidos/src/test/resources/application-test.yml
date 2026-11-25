@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pedidos_test_db
+
+logging:
+  file:
+    path: build/test-logs
